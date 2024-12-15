@@ -1,0 +1,102 @@
+@page "/Inventory/add"
+@using InventorySystemV2.Models
+@using Microsoft.EntityFrameworkCore
+<h3>Add Product</h3>
+@rendermode InteractiveServer
+
+@inject NavigationManager Navigation
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<EditForm Model="dProduct" OnValidSubmit="HandleValidSubmit" FormName="CreateProduct">
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+
+    <div class="form-group">
+        <div>
+            <label for="name">Name:</label>
+            <InputText id="name" @bind-Value="dProduct.Name"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <div>
+            <label for="description">Description:</label>
+            <InputText id="description" @bind-Value="dProduct.Description"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <div>
+            <label for="price">Price:</label>
+            <InputNumber id="price" @bind-Value="dProduct.Price"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <div>
+            <label for="quantity">Quantity:</label>
+            <InputNumber id="quantity" @bind-Value="dProduct.Quantity"/>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" @onkeypress:preventDefault>Create</button>
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+@code {
+    
+    
+    // True when an asynchronous operation is running.
+    private bool Busy;
+
+    // True after successful add.
+    private bool Success;
+
+    // True when an error occurred.
+    private bool Error;
+
+    private string ErrorMessage = string.Empty;
+    
+    private DisplayProduct dProduct = new();
+    
+    
+    protected override async Task OnInitializedAsync()
+    {
+       
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        try
+        {
+            var newProduct = new Product
+            {
+                Name = dProduct.Name,
+                Description = dProduct.Description,
+                Price = dProduct.Price,
+                Quantity = dProduct.Quantity,
+                ImageUrl = ""
+            };
+            
+            context.Products.Add(newProduct);
+            await context.SaveChangesAsync();
+            Navigation.NavigateTo("/inventory");
+
+    
+        }
+        catch (Exception e)
+        {
+            Success = false;
+            Error = true;
+            ErrorMessage = e.Message;
+            Busy = false;
+        }
+        
+        Navigation.NavigateTo("/inventory");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/inventory");
+    }
+
+}

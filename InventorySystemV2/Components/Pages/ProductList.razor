@@ -1,0 +1,110 @@
+@page "/inventory"
+@using InventorySystemV2.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IDbContextFactory<AppDbContext> DbFactory
+@using System.IO
+@using System.Text
+@using InventorySystemV2.Miscellaneous
+@inject IJSRuntime JS
+
+<h3>Product List</h3>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Precio</th>
+        <th>Cantidad</th>
+        <th>Acción</th>
+    </tr>
+    </thead>
+    <tbody>
+    @if (products.Count != 0)
+    {
+        @foreach (var product in products)
+        {
+            <tr>
+                <td>@product.Name</td>
+                <td>@product.Description</td>
+                <td>@product.Price.ToString("C")</td>
+                <td>@product.Quantity</td>
+                <td>
+                    <Button class="btn btn-secondary" @onclick="() => EditProduct(product.Id)">Editar</Button>
+                    <Button class="btn btn-danger" @onclick="() => DeleteProduct(product.Id)">Eliminar</Button>
+                </td>
+            </tr>
+        }
+    }
+
+    </tbody>
+</table>
+<button class="btn btn-primary" @onclick="CreateProduct">Crear Producto</button>
+<button class="btn btn-info" @onclick="DownloadFileFromStream">Exportar Inventario</button>
+
+<script>
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+        const arrayBuffer = await contentStreamReference.arrayBuffer();
+        const blob = new Blob([arrayBuffer]);
+        const url = URL.createObjectURL(blob);
+        const anchorElement = document.createElement('a');
+        anchorElement.href = url;
+        anchorElement.download = fileName ?? '';
+        anchorElement.click();
+        anchorElement.remove();
+        URL.revokeObjectURL(url);
+    }
+</script>
+
+@code {
+    private List<Product> products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+    
+    private void EditProduct(int id) =>
+        Navigation.NavigateTo($"/inventory/edit/{id}");
+
+    private async Task DeleteProduct(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        var product = await context.Products.FindAsync(id);
+        if (product != null)
+        {
+            context.Products.Remove(product);
+            await context.SaveChangesAsync();
+            await LoadProducts();
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        using var context = DbFactory.CreateDbContext();
+        products = await context.Products.ToListAsync();
+    }
+    
+    private Stream GetFileStream()
+    {
+        var bytes = CSVExporter.ListToCsvBytes(products);
+        var fileStream = new MemoryStream(bytes);
+        return fileStream;
+    }
+
+    private async Task DownloadFileFromStream()
+    {
+        var fileStream = GetFileStream();
+        var fileName = "invetory.csv";
+
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+    }
+
+    private void CreateProduct() =>
+        Navigation.NavigateTo("/inventory/add");
+
+}

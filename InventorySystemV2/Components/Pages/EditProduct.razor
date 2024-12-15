@@ -1,0 +1,88 @@
+@page "/inventory/edit/{ProductId:int}"
+
+@using InventorySystemV2.Models
+@using Microsoft.EntityFrameworkCore
+<h3>EditProduct</h3>
+
+@rendermode InteractiveServer
+
+@inject NavigationManager Navigation
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<EditForm Model="dProduct" OnValidSubmit="HandleValidSubmit" FormName="EditProduct">
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+
+    <div class="form-group">
+        <div>
+            <label for="name">Name:</label>
+            <InputText id="name" @bind-Value="dProduct.Name"/>
+        </div>
+    </div>
+    <div class="form-group">
+        <div>
+            <label for="description">Description:</label>
+            <InputText id="description" @bind-Value="dProduct.Description"/>
+        </div>
+    </div>
+    <div class="form-group ">
+        <div>
+            <label for="price">Price:</label>
+            <InputNumber id="price" @bind-Value="dProduct.Price"/>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div>
+            <label for="quantity">Quantity:</label>
+            <InputNumber id="quantity" @bind-Value="dProduct.Quantity"/>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" @onkeypress:preventDefault>Update</button>
+    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+</EditForm>
+
+
+@code {
+    [Parameter] public int ProductId { get; set; }
+
+    private DisplayProduct dProduct = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var product = context.Products.FindAsync(ProductId).Result;
+        if (product != null)
+        {
+            dProduct.Id = product.Id;
+            dProduct.Name = product.Name;
+            dProduct.Description = product.Description;
+            dProduct.Price = product.Price;
+            dProduct.Quantity = product.Quantity;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var product = await context.Products.FindAsync(dProduct.Id);
+        if (product != null)
+        {
+            product.Name = dProduct.Name;
+            product.Description = dProduct.Description;
+            product.Price = dProduct.Price;
+            product.Quantity = dProduct.Quantity;
+            await context.SaveChangesAsync();
+            Navigation.NavigateTo("/inventory");
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/inventory");
+    }
+
+}
