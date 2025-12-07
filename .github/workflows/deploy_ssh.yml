@@ -1,0 +1,61 @@
+name: Deploy .NET 9 to VM
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  DOTNET_VERSION: '9.0'
+  PROJECT_PATH: './docugerapp/docugerapp.csproj'  # Update with your actual project path
+  CONFIGURATION: 'Release'
+  FRAMEWORK: 'net9.0'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build solution
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration ${{ env.CONFIGURATION }} --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+
+      - name: Publish application
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            --configuration ${{ env.CONFIGURATION }} \
+            --output ./publish \
+            --self-contained false \
+            --no-build
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VM host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create app directory on VM
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /var/www/blazor && sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} /var/www/blazor"
+
+      - name: Upload published app to VM
+        run: |
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            --delete \
+            ./publish/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/blazor/

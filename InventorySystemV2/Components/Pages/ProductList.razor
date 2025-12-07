@@ -1,15 +1,16 @@
 @page "/inventory"
+@using InventorySystemV2.Miscellaneous
 @using InventorySystemV2.Models
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject IDbContextFactory<AppDbContext> DbFactory
-@using System.IO
-@using System.Text
-@using InventorySystemV2.Miscellaneous
 @inject IJSRuntime JS
 
-<h3>Product List</h3>
+@attribute [Authorize]
+
+<h3>Inventario</h3>
 
 <table class="table">
     <thead>
