@@ -6,7 +6,7 @@ on:
 
 env:
   DOTNET_VERSION: '9.0'
-  PROJECT_PATH: './docugerapp/docugerapp.csproj'  # Update with your actual project path
+  PROJECT_PATH: './InventorySystemV2/InventorySystemV2.csproj'  # Update with your actual project path
   CONFIGURATION: 'Release'
   FRAMEWORK: 'net9.0'
 
